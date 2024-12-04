@@ -192,6 +192,7 @@ class EspeakDriver:
         self._text_to_say = text
 
     def _start_synthesis(self, text):
+        # print('set busy true 0')
         self._proxy.setBusy(True)
         self._proxy.notify("started-utterance")
         self._speaking = True
@@ -199,6 +200,7 @@ class EspeakDriver:
         try:
             _espeak.Synth(str(text).encode("utf-8"), flags=_espeak.ENDPAUSE | _espeak.CHARS_UTF8)
         except Exception as e:
+            # print('set busy false 0')
             self._proxy.setBusy(False)
             self._proxy.notify("error", exception=e)
             raise
@@ -214,6 +216,7 @@ class EspeakDriver:
         i = 0
         while True:
             event = events[i]
+            # print(event.type)
             if event.type == _espeak.EVENT_LIST_TERMINATED:
                 break
             if event.type == _espeak.EVENT_WORD:
@@ -259,7 +262,7 @@ class EspeakDriver:
                         if platform.system() == "Darwin":  # macOS
                             subprocess.run(["afplay", temp_wav_name], check=True)
                         elif platform.system() == "Linux":
-                            os.system(f"aplay {temp_wav_name} -q")
+                            os.system(f"aplay -D plug{self.hardware} {temp_wav_name} -q")
                         elif platform.system() == "Windows":
                             winsound.PlaySound(temp_wav_name, winsound.SND_FILENAME)
 
@@ -272,6 +275,7 @@ class EspeakDriver:
                 self._data_buffer = b""
                 self._speaking = False
                 self._proxy.notify("finished-utterance", completed=True)
+                # print('set busy false 1')
                 self._proxy.setBusy(False)
                 self.endLoop()
                 break
@@ -293,9 +297,12 @@ class EspeakDriver:
             if not self._looping:
                 break
             if first:
+                # print('set busy false 2', self._text_to_say)
                 self._proxy.setBusy(False)
+                # print('set busy false 2.05', self._text_to_say)
                 first = False
                 if self._text_to_say:
+                    # print('set busy false 2.1')
                     self._start_synthesis(self._text_to_say)
             self.iterate()
             time.sleep(0.01)
@@ -307,6 +314,7 @@ class EspeakDriver:
             _espeak.Cancel()
             self._stopping = False
             self._proxy.notify('finished-utterance', completed=False)
+            # print('set busy false 3')
             self._proxy.setBusy(False)
             self.endLoop()
 
